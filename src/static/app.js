@@ -162,6 +162,11 @@ function updateMatchOptions() {
   });
 }
 
+function groupOptionLabel(group) {
+  const teamNames = group.teams.map((team) => team.name).join(" / ");
+  return `Group ${group.group} · ${teamNames}`;
+}
+
 async function loadGroups() {
   const response = await fetch("/api/groups");
   const data = await response.json();
@@ -169,7 +174,8 @@ async function loadGroups() {
   groups.forEach((group) => {
     const option = document.createElement("option");
     option.value = group.group;
-    option.textContent = `Group ${group.group}`;
+    option.textContent = groupOptionLabel(group);
+    option.title = groupOptionLabel(group);
     groupSelect.appendChild(option);
   });
   updateMatchOptions();
