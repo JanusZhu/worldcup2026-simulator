@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>2026 小组赛比分预测</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <h1>2026 小组赛比分预测</h1>
+          <p>选择一场小组赛，系统会模拟 10,000 次并生成比分概率。</p>
+        </div>
+        <div class="badge">Monte Carlo</div>
+      </header>
+
+      <section class="controls" aria-label="选择比赛">
+        <label for="groupSelect">
+          小组
+          <select id="groupSelect"></select>
+        </label>
+        <label for="matchSelect">
+          比赛
+          <select id="matchSelect"></select>
+        </label>
+        <button id="simulateButton" type="button">模拟比分</button>
+      </section>
+
+      <section id="result" class="result" aria-live="polite">
+        <div class="empty-state">请选择一场小组赛开始模拟。</div>
+      </section>
+    </main>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+  </body>
+</html>

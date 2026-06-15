@@ -1,0 +1,49 @@
+team,elo,attack,defense,confederation,is_host
+Mexico,1881,0.783,0.897,CONCACAF,true
+South Africa,1511,0.860,0.857,CAF,false
+South Korea,1786,1.060,1.036,AFC,false
+Czechia,1712,1.156,1.269,UEFA,false
+Canada,1767,0.714,0.803,CONCACAF,true
+Bosnia and Herzegovina,1616,0.727,1.350,UEFA,false
+Qatar,1447,0.789,1.350,AFC,false
+Switzerland,1865,1.038,1.145,UEFA,false
+Brazil,1978,1.015,1.071,CONMEBOL,false
+Morocco,1840,1.296,0.650,CAF,false
+Haiti,1536,1.350,1.160,CONCACAF,false
+Scotland,1794,0.825,1.350,UEFA,false
+United States,1780,0.898,1.350,CONCACAF,true
+Paraguay,1780,0.650,1.156,CONMEBOL,false
+Australia,1839,1.003,0.714,AFC,false
+Turkey,1849,0.999,1.350,UEFA,false
+Germany,1939,1.326,0.960,UEFA,false
+Curacao,1427,1.184,1.071,CONCACAF,false
+Ivory Coast,1695,0.960,0.714,CAF,false
+Ecuador,1938,0.650,0.650,CONMEBOL,false
+Netherlands,1944,1.350,1.035,UEFA,false
+Japan,1910,1.350,0.665,AFC,false
+Sweden,1712,1.092,1.350,UEFA,false
+Tunisia,1628,0.708,0.839,CAF,false
+Belgium,1894,1.214,0.994,UEFA,false
+Egypt,1696,0.813,0.868,CAF,false
+Iran,1772,1.152,0.821,AFC,false
+New Zealand,1562,1.243,1.071,OFC,false
+Spain,2157,1.350,0.967,UEFA,false
+Cape Verde,1578,0.701,1.071,CAF,false
+Saudi Arabia,1576,0.650,1.024,AFC,false
+Uruguay,1892,0.650,0.812,CONMEBOL,false
+France,2063,1.022,1.035,UEFA,false
+Senegal,1860,1.130,0.650,CAF,false
+Iraq,1607,0.727,1.011,AFC,false
+Norway,1914,1.350,1.026,UEFA,false
+Argentina,2115,1.230,0.650,CONMEBOL,false
+Algeria,1772,1.300,0.769,CAF,false
+Austria,1830,1.280,0.872,UEFA,false
+Jordan,1680,0.962,1.314,AFC,false
+Portugal,1989,1.226,1.106,UEFA,false
+Congo DR,1652,0.669,0.650,CAF,false
+Uzbekistan,1714,0.762,0.714,AFC,false
+Colombia,1982,1.152,0.999,CONMEBOL,false
+England,2024,1.078,0.650,UEFA,false
+Croatia,1912,1.094,1.190,UEFA,false
+Ghana,1510,0.805,1.350,CAF,false
+Panama,1730,0.867,1.350,CONCACAF,false
