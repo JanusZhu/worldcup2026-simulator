@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>2026 小组赛比分预测</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v='20260615-6') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v='20260615-7') }}" />
   </head>
   <body>
     <main class="shell">
@@ -16,23 +16,31 @@
         <div class="badge">Monte Carlo</div>
       </header>
 
-      <section class="controls" aria-label="选择比赛">
-        <label for="groupSelect">
-          小组
-          <select id="groupSelect"></select>
-        </label>
-        <label for="matchSelect">
-          比赛
-          <select id="matchSelect"></select>
-        </label>
-        <button id="simulateButton" type="button">模拟比分</button>
+      <nav class="sticky-nav" aria-label="页面导航">
+        <a href="#matchPredictor">单场比分</a>
+        <a href="#currentProbabilities">小组出线</a>
+        <a href="#championSimulation">冠军概率</a>
+      </nav>
+
+      <section id="matchPredictor" class="tool-section">
+        <section class="controls" aria-label="选择比赛">
+          <label for="groupSelect">
+            小组
+            <select id="groupSelect"></select>
+          </label>
+          <label for="matchSelect">
+            比赛
+            <select id="matchSelect"></select>
+          </label>
+          <button id="simulateButton" type="button">模拟比分</button>
+        </section>
+
+        <section id="result" class="result" aria-live="polite">
+          <div class="empty-state">请选择一场小组赛开始模拟。</div>
+        </section>
       </section>
 
-      <section id="result" class="result" aria-live="polite">
-        <div class="empty-state">请选择一场小组赛开始模拟。</div>
-      </section>
-
-      <section class="current-section">
+      <section id="currentProbabilities" class="current-section">
         <div class="section-heading">
           <div>
             <h2>当前小组出线概率</h2>
@@ -42,7 +50,20 @@
         </div>
         <div id="currentPredictions" class="group-probability-grid"></div>
       </section>
+
+      <section id="championSimulation" class="champion-section">
+        <div class="section-heading">
+          <div>
+            <h2>冠军概率模拟</h2>
+            <p id="championMeta">点击按钮后，系统会基于当前已结束比赛继续模拟整届世界杯。</p>
+          </div>
+          <button id="simulateChampionButton" class="secondary-button" type="button">模拟冠军</button>
+        </div>
+        <div id="championResults" class="champion-results">
+          <div class="empty-state compact">尚未运行冠军模拟。</div>
+        </div>
+      </section>
     </main>
-    <script src="{{ url_for('static', filename='app.js', v='20260615-6') }}"></script>
+    <script src="{{ url_for('static', filename='app.js', v='20260615-7') }}"></script>
   </body>
 </html>

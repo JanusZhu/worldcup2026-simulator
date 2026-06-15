@@ -2,9 +2,12 @@ const groupSelect = document.querySelector("#groupSelect");
 const matchSelect = document.querySelector("#matchSelect");
 const simulateButton = document.querySelector("#simulateButton");
 const refreshCurrentButton = document.querySelector("#refreshCurrentButton");
+const simulateChampionButton = document.querySelector("#simulateChampionButton");
 const result = document.querySelector("#result");
 const currentMeta = document.querySelector("#currentMeta");
 const currentPredictions = document.querySelector("#currentPredictions");
+const championMeta = document.querySelector("#championMeta");
+const championResults = document.querySelector("#championResults");
 
 let groups = [];
 
@@ -203,6 +206,70 @@ function renderCurrentPredictions(data) {
   `).join("");
 }
 
+function renderChampionPredictionError(message) {
+  championMeta.textContent = message;
+  championResults.innerHTML = `<div class="empty-state compact error">${message}</div>`;
+}
+
+function championTable(teams) {
+  return `
+    <table>
+      <thead>
+        <tr>
+          <th>排名</th>
+          <th>球队</th>
+          <th>冠军</th>
+          <th>决赛</th>
+          <th>四强</th>
+          <th>八强</th>
+          <th>32强</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${teams.map((row, index) => `
+          <tr>
+            <td>${index + 1}</td>
+            <td class="team-cell">${flagImage(row.team)}<span>${row.team.name}</span></td>
+            <td><strong>${percent(row.champion_prob)}</strong></td>
+            <td>${percent(row.final_prob)}</td>
+            <td>${percent(row.semifinal_prob)}</td>
+            <td>${percent(row.quarterfinal_prob)}</td>
+            <td>${percent(row.round_of_32_prob)}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderChampionProbabilities(data) {
+  const topTeams = data.teams.slice(0, 10);
+  championMeta.textContent = `已锁定 ${data.locked_matches} 场已结束小组赛，基于 ${data.simulations.toLocaleString()} 次整届世界杯模拟。Seed：${data.seed}。数据更新时间：${formatUpdatedAt(data.last_updated)}。`;
+  championResults.innerHTML = `
+    <div class="champion-leaders">
+      ${topTeams.map((row, index) => `
+        <article class="leader-row">
+          <div class="leader-team">
+            <span class="rank">${index + 1}</span>
+            ${flagImage(row.team)}
+            <strong>${row.team.name}</strong>
+          </div>
+          <div class="leader-probability">
+            <div class="bar-track">
+              <div class="bar-fill home" style="width: ${Math.max(row.champion_prob * 100, 1)}%"></div>
+            </div>
+            <span>${percent(row.champion_prob)}</span>
+          </div>
+        </article>
+      `).join("")}
+    </div>
+    <article class="champion-table panel">
+      <h3>全部球队夺冠概率</h3>
+      ${championTable(data.teams)}
+    </article>
+  `;
+}
+
 function updateMatchOptions(preferredMatchValue = "") {
   const group = groups.find((item) => item.group === groupSelect.value);
   matchSelect.innerHTML = "";
@@ -290,10 +357,41 @@ async function refreshCurrentData() {
   }
 }
 
+async function simulateChampionProbabilities() {
+  if (simulateChampionButton) {
+    simulateChampionButton.disabled = true;
+    simulateChampionButton.textContent = "模拟中...";
+  }
+  championMeta.textContent = "正在基于当前最新赛果模拟整届世界杯，可能需要一些时间...";
+  championResults.innerHTML = `<div class="empty-state compact">正在模拟 10,000 届世界杯...</div>`;
+  try {
+    const response = await fetch("/api/champion-probabilities?refresh=1", {
+      method: "POST",
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      renderChampionPredictionError(data.error || "冠军概率模拟失败。");
+    } else {
+      renderChampionProbabilities(data);
+      await loadGroups();
+    }
+  } catch {
+    renderChampionPredictionError("冠军概率模拟失败，请稍后再试。");
+  } finally {
+    if (simulateChampionButton) {
+      simulateChampionButton.disabled = false;
+      simulateChampionButton.textContent = "重新模拟冠军";
+    }
+  }
+}
+
 groupSelect.addEventListener("change", () => updateMatchOptions());
 simulateButton.addEventListener("click", simulateSelectedMatch);
 if (refreshCurrentButton) {
   refreshCurrentButton.addEventListener("click", refreshCurrentData);
+}
+if (simulateChampionButton) {
+  simulateChampionButton.addEventListener("click", simulateChampionProbabilities);
 }
 
 loadGroups()

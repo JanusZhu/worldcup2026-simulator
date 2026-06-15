@@ -20,10 +20,11 @@ from .single_match import simulate_score_probabilities
 
 SIMULATIONS_PER_MATCH = 10000
 CURRENT_PROBABILITY_SIMULATIONS = 2000
+CHAMPION_PROBABILITY_SIMULATIONS = 10000
 SCHEDULE_CACHE_TTL_SECONDS = 300
 DEFAULT_SEED = 42
 ROOT_DIR = Path(__file__).resolve().parents[1]
-APP_VERSION = "2026-06-15-3"
+APP_VERSION = "2026-06-15-4"
 
 FLAG_CODES = {
     "Algeria": "dz",
@@ -146,6 +147,27 @@ def schedule_signature(schedules: list[MatchSchedule]) -> tuple[tuple[Any, ...],
     )
 
 
+def requested_simulations(default: int) -> int:
+    raw_value = request.args.get("simulations")
+    if raw_value is None:
+        return default
+    try:
+        value = int(raw_value)
+    except ValueError:
+        return default
+    return max(1, min(value, default))
+
+
+def requested_seed() -> int:
+    raw_value = request.args.get("seed")
+    if raw_value is not None:
+        try:
+            return int(raw_value)
+        except ValueError:
+            pass
+    return random.SystemRandom().randint(1, 2_147_483_647)
+
+
 def build_match_options(
     groups: dict[str, list[Team]],
     schedules: list[MatchSchedule],
@@ -248,6 +270,8 @@ def create_app(
         "loaded_at_monotonic": time.monotonic(),
         "current_payload": None,
         "current_signature": None,
+        "champion_payload": None,
+        "champion_signature": None,
     }
 
     def get_schedule_state(force_refresh: bool = False) -> dict[str, Any]:
@@ -268,6 +292,8 @@ def create_app(
                     if new_signature != old_signature:
                         schedule_cache["current_payload"] = None
                         schedule_cache["current_signature"] = None
+                        schedule_cache["champion_payload"] = None
+                        schedule_cache["champion_signature"] = None
 
         current_schedules = schedule_cache["schedules"]
         match_options = build_match_options(groups, current_schedules)
@@ -364,6 +390,53 @@ def create_app(
         }
         schedule_cache["current_payload"] = payload
         schedule_cache["current_signature"] = current_signature
+        return jsonify(payload)
+
+    @app.route("/api/champion-probabilities", methods=["GET", "POST"])
+    def api_champion_probabilities() -> Any:
+        force_refresh = request.args.get("refresh") == "1"
+        simulation_count = requested_simulations(CHAMPION_PROBABILITY_SIMULATIONS)
+        simulation_seed = requested_seed()
+        state = get_schedule_state(force_refresh=force_refresh)
+        current_signature = (schedule_signature(state["schedules"]), simulation_count, simulation_seed)
+        if (
+            not force_refresh
+            and schedule_cache["champion_payload"] is not None
+            and schedule_cache["champion_signature"] == current_signature
+        ):
+            return jsonify(schedule_cache["champion_payload"])
+
+        fixed_results = state["fixed_results"]
+        probabilities = run_simulations(
+            simulation_count,
+            teams,
+            groups,
+            seed=simulation_seed,
+            fixed_results=fixed_results,
+            show_progress=False,
+        ).sort_values("champion_prob", ascending=False)
+
+        payload = {
+            "simulations": simulation_count,
+            "seed": simulation_seed,
+            "locked_matches": len(fixed_results),
+            "last_updated": state["last_updated"],
+            "teams": [
+                {
+                    "team": team_payload(teams[str(row.team)]),
+                    "champion_prob": float(row.champion_prob),
+                    "final_prob": float(row.final_prob),
+                    "semifinal_prob": float(row.semifinal_prob),
+                    "quarterfinal_prob": float(row.quarterfinal_prob),
+                    "round_of_16_prob": float(row.round_of_16_prob),
+                    "round_of_32_prob": float(row.round_of_32_prob),
+                    "group_eliminated_prob": float(row.group_eliminated_prob),
+                }
+                for row in probabilities.itertuples(index=False)
+            ],
+        }
+        schedule_cache["champion_payload"] = payload
+        schedule_cache["champion_signature"] = current_signature
         return jsonify(payload)
 
     @app.route("/api/simulate-match", methods=["GET", "POST"])

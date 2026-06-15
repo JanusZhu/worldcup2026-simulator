@@ -1,4 +1,5 @@
 :root {
+  scroll-behavior: smooth;
   color-scheme: light;
   --bg: #f3f5f2;
   --ink: #18211f;
@@ -36,6 +37,38 @@ body {
   gap: 18px;
   padding: 18px 0 22px;
   border-bottom: 1px solid var(--line);
+}
+
+.sticky-nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 0;
+  background: rgba(243, 245, 242, 0.94);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(10px);
+}
+
+.sticky-nav a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--green);
+  font-size: 14px;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.sticky-nav a:hover {
+  border-color: var(--green);
+  background: #eef4ef;
 }
 
 h1,
@@ -139,7 +172,14 @@ button:disabled {
   gap: 18px;
 }
 
-.current-section {
+.tool-section,
+.current-section,
+.champion-section {
+  scroll-margin-top: 72px;
+}
+
+.current-section,
+.champion-section {
   display: grid;
   gap: 14px;
   margin-top: 28px;
@@ -175,6 +215,77 @@ button:disabled {
   border: 1px solid var(--line);
   padding: 14px;
   overflow: auto;
+}
+
+.champion-results {
+  display: grid;
+  gap: 14px;
+}
+
+.champion-leaders {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.leader-row {
+  display: grid;
+  grid-template-columns: minmax(210px, 1fr) minmax(160px, 0.8fr);
+  gap: 12px;
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  padding: 12px;
+}
+
+.leader-team,
+.leader-probability {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.leader-team .flag {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 21px;
+}
+
+.leader-team strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rank {
+  display: inline-flex;
+  flex: 0 0 28px;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  background: #eef4ef;
+  color: var(--green);
+  font-weight: 800;
+}
+
+.leader-probability .bar-track {
+  min-width: 0;
+  flex: 1;
+}
+
+.leader-probability span {
+  flex: 0 0 54px;
+  text-align: right;
+  font-weight: 800;
+}
+
+.champion-table {
+  overflow: auto;
+}
+
+.champion-table table {
+  min-width: 720px;
 }
 
 .group-card h3 {
@@ -226,6 +337,10 @@ button:disabled {
   border: 1px dashed #c6cec8;
   background: rgba(255, 255, 255, 0.54);
   font-size: 17px;
+}
+
+.empty-state.compact {
+  min-height: 130px;
 }
 
 .empty-state.error {
@@ -433,8 +548,18 @@ td {
   .match-layout,
   .match-meta,
   .dashboard-grid,
-  .group-probability-grid {
+  .group-probability-grid,
+  .champion-leaders,
+  .leader-row {
     grid-template-columns: 1fr;
+  }
+
+  .sticky-nav {
+    overflow-x: auto;
+  }
+
+  .sticky-nav a {
+    flex: 0 0 auto;
   }
 
   .section-heading {

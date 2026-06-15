@@ -93,3 +93,32 @@ def test_current_probabilities_api_supports_manual_refresh() -> None:
     assert payload["locked_matches"] == 1
     assert payload["last_updated"]
     assert len(payload["groups"]) == 12
+
+
+def test_champion_probabilities_api_returns_ranked_teams() -> None:
+    client = app.test_client()
+
+    response = client.post("/api/champion-probabilities?simulations=20&seed=123")
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["simulations"] == 20
+    assert payload["seed"] == 123
+    assert payload["locked_matches"] == 1
+    assert payload["last_updated"]
+    assert len(payload["teams"]) == 48
+    champion_probability_sum = sum(team["champion_prob"] for team in payload["teams"])
+    assert abs(champion_probability_sum - 1.0) < 0.000001
+    assert payload["teams"][0]["champion_prob"] >= payload["teams"][-1]["champion_prob"]
+    assert payload["teams"][0]["team"]["flag_url"]
+
+
+def test_champion_probabilities_api_generates_seed_when_missing() -> None:
+    client = app.test_client()
+
+    response = client.post("/api/champion-probabilities?simulations=5")
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert isinstance(payload["seed"], int)
+    assert payload["seed"] > 0
