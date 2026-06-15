@@ -178,7 +178,8 @@ async function loadGroups() {
 async function simulateSelectedMatch() {
   renderLoading();
   const match = JSON.parse(matchSelect.value);
-  const response = await fetch("/api/simulate-match", {
+  const params = new URLSearchParams(match);
+  const response = await fetch(`/api/simulate-match?${params.toString()}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(match),

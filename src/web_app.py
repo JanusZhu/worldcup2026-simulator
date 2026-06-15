@@ -16,6 +16,7 @@ from .single_match import simulate_score_probabilities
 SIMULATIONS_PER_MATCH = 10000
 DEFAULT_SEED = 42
 ROOT_DIR = Path(__file__).resolve().parents[1]
+APP_VERSION = "2026-06-15-2"
 
 FLAG_CODES = {
     "Algeria": "dz",
@@ -226,6 +227,10 @@ def create_app(
     def index() -> str:
         return render_template("index.html")
 
+    @app.get("/healthz")
+    def healthz() -> Any:
+        return jsonify({"ok": True, "version": APP_VERSION})
+
     @app.get("/api/groups")
     def api_groups() -> Any:
         return jsonify(
@@ -241,11 +246,14 @@ def create_app(
             }
         )
 
-    @app.post("/api/simulate-match")
+    @app.route("/api/simulate-match", methods=["GET", "POST"])
     def api_simulate_match() -> Any:
         payload = request.get_json(silent=True) or {}
         team_a_name = payload.get("team_a")
         team_b_name = payload.get("team_b")
+        if request.method == "GET":
+            team_a_name = request.args.get("team_a")
+            team_b_name = request.args.get("team_b")
         if team_a_name not in teams or team_b_name not in teams:
             return jsonify({"error": "Unknown team"}), 400
         if frozenset((team_a_name, team_b_name)) not in valid_group_matches:
