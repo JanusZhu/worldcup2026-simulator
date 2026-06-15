@@ -102,6 +102,26 @@ https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcu
 
 If the schedule source is unavailable, the app still works with the local group data, but schedule/result fields may be blank.
 
+## Deploy
+
+This repository includes `render.yaml` for Render deployment.
+
+1. Push the repository to GitHub.
+2. Open Render and choose **New > Blueprint**.
+3. Connect this repository:
+
+```text
+JanusZhu/worldcup2026-simulator
+```
+
+4. Render will read `render.yaml`, install dependencies, and start the app with:
+
+```text
+gunicorn src.web_app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+```
+
+The deployed app uses `ENABLE_SCHEDULE_NETWORK=1`, so it will try to load the latest group-stage schedule/results when the service starts.
+
 ## Test
 
 ```powershell

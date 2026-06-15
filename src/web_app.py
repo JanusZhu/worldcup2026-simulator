@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import itertools
+import os
 from pathlib import Path
 from typing import Any
 
@@ -296,11 +297,12 @@ def create_app(
     return app
 
 
-app = create_app()
+app = create_app(allow_schedule_network=os.environ.get("ENABLE_SCHEDULE_NETWORK", "0") == "1")
 
 
 def main() -> None:
-    create_app(allow_schedule_network=True).run(host="127.0.0.1", port=5000, debug=False)
+    port = int(os.environ.get("PORT", "5000"))
+    create_app(allow_schedule_network=True).run(host="0.0.0.0", port=port, debug=False)
 
 
 if __name__ == "__main__":
