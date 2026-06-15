@@ -5,6 +5,7 @@ from pathlib import Path
 
 from .data_loader import load_groups, load_teams
 from .monte_carlo import run_simulations
+from .schedule_loader import fixed_results_from_schedules, load_match_schedule
 from .single_match import simulate_score_probabilities
 
 
@@ -18,6 +19,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--match-team-a", help="Run single-match score simulation for this team")
     parser.add_argument("--match-team-b", help="Run single-match score simulation against this team")
     parser.add_argument("--top-scores", type=int, default=10, help="Number of likely scores to print")
+    parser.add_argument(
+        "--lock-played-results",
+        action="store_true",
+        help="Use real scores for completed group-stage matches and simulate only remaining matches",
+    )
     return parser.parse_args()
 
 
@@ -58,7 +64,16 @@ def main() -> None:
         return
 
     groups = load_groups(args.groups, teams)
-    results = run_simulations(args.simulations, teams, groups, seed=args.seed)
+    fixed_results = None
+    if args.lock_played_results:
+        schedules = load_match_schedule(
+            cache_path=Path(".rating_sources") / "worldcup2026_schedule.json",
+            allow_network=True,
+        )
+        fixed_results = fixed_results_from_schedules(schedules)
+        print(f"Locked {len(fixed_results)} completed group-stage matches from schedule data.")
+
+    results = run_simulations(args.simulations, teams, groups, seed=args.seed, fixed_results=fixed_results)
 
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)

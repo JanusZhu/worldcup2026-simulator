@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>2026 小组赛比分预测</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v='20260615-3') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v='20260615-6') }}" />
   </head>
   <body>
     <main class="shell">
@@ -31,7 +31,18 @@
       <section id="result" class="result" aria-live="polite">
         <div class="empty-state">请选择一场小组赛开始模拟。</div>
       </section>
+
+      <section class="current-section">
+        <div class="section-heading">
+          <div>
+            <h2>当前小组出线概率</h2>
+            <p id="currentMeta">正在读取已结束比赛并模拟剩余赛程...</p>
+          </div>
+          <button id="refreshCurrentButton" class="secondary-button" type="button">刷新赛果</button>
+        </div>
+        <div id="currentPredictions" class="group-probability-grid"></div>
+      </section>
     </main>
-    <script src="{{ url_for('static', filename='app.js', v='20260615-3') }}"></script>
+    <script src="{{ url_for('static', filename='app.js', v='20260615-6') }}"></script>
   </body>
 </html>

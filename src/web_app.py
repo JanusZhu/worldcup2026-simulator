@@ -2,21 +2,28 @@ from __future__ import annotations
 
 import itertools
 import os
+import random
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from flask import Flask, jsonify, render_template, request
 
 from .data_loader import load_groups, load_teams
+from .group_stage import current_group_standings
+from .monte_carlo import run_simulations
 from .models import Team
-from .schedule_loader import MatchSchedule, load_match_schedule
+from .schedule_loader import MatchSchedule, fixed_results_from_schedules, load_match_schedule
 from .single_match import simulate_score_probabilities
 
 
 SIMULATIONS_PER_MATCH = 10000
+CURRENT_PROBABILITY_SIMULATIONS = 2000
+SCHEDULE_CACHE_TTL_SECONDS = 300
 DEFAULT_SEED = 42
 ROOT_DIR = Path(__file__).resolve().parents[1]
-APP_VERSION = "2026-06-15-2"
+APP_VERSION = "2026-06-15-3"
 
 FLAG_CODES = {
     "Algeria": "dz",
@@ -118,6 +125,27 @@ def schedule_lookup(schedules: list[MatchSchedule]) -> dict[frozenset[str], Matc
     }
 
 
+def now_utc_iso() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def schedule_signature(schedules: list[MatchSchedule]) -> tuple[tuple[Any, ...], ...]:
+    return tuple(
+        sorted(
+            (
+                schedule.group,
+                schedule.team_a,
+                schedule.team_b,
+                schedule.date,
+                schedule.time,
+                schedule.actual_goals_a,
+                schedule.actual_goals_b,
+            )
+            for schedule in schedules
+        )
+    )
+
+
 def build_match_options(
     groups: dict[str, list[Team]],
     schedules: list[MatchSchedule],
@@ -210,18 +238,51 @@ def create_app(
     app = Flask(__name__)
     teams = load_teams(ROOT_DIR / "data" / "teams.csv")
     groups = load_groups(ROOT_DIR / "data" / "groups.csv", teams)
-    if schedules is None:
-        schedules = load_match_schedule(
+    provided_schedules = schedules
+    schedule_cache: dict[str, Any] = {
+        "schedules": schedules if schedules is not None else load_match_schedule(
             cache_path=ROOT_DIR / ".rating_sources" / "worldcup2026_schedule.json",
             allow_network=allow_schedule_network,
-        )
-    match_options = build_match_options(groups, schedules)
-    schedules_by_match = schedule_lookup(schedules)
-    valid_group_matches = {
-        frozenset((match["team_a"], match["team_b"]))
-        for matches in match_options.values()
-        for match in matches
+        ),
+        "last_updated": now_utc_iso(),
+        "loaded_at_monotonic": time.monotonic(),
+        "current_payload": None,
+        "current_signature": None,
     }
+
+    def get_schedule_state(force_refresh: bool = False) -> dict[str, Any]:
+        if provided_schedules is None:
+            age_seconds = time.monotonic() - float(schedule_cache["loaded_at_monotonic"])
+            should_refresh = force_refresh or age_seconds >= SCHEDULE_CACHE_TTL_SECONDS
+            if should_refresh:
+                old_signature = schedule_signature(schedule_cache["schedules"])
+                refreshed_schedules = load_match_schedule(
+                    cache_path=ROOT_DIR / ".rating_sources" / "worldcup2026_schedule.json",
+                    allow_network=allow_schedule_network,
+                )
+                if refreshed_schedules:
+                    new_signature = schedule_signature(refreshed_schedules)
+                    schedule_cache["schedules"] = refreshed_schedules
+                    schedule_cache["last_updated"] = now_utc_iso()
+                    schedule_cache["loaded_at_monotonic"] = time.monotonic()
+                    if new_signature != old_signature:
+                        schedule_cache["current_payload"] = None
+                        schedule_cache["current_signature"] = None
+
+        current_schedules = schedule_cache["schedules"]
+        match_options = build_match_options(groups, current_schedules)
+        return {
+            "schedules": current_schedules,
+            "match_options": match_options,
+            "schedules_by_match": schedule_lookup(current_schedules),
+            "fixed_results": fixed_results_from_schedules(current_schedules),
+            "valid_group_matches": {
+                frozenset((match["team_a"], match["team_b"]))
+                for matches in match_options.values()
+                for match in matches
+            },
+            "last_updated": schedule_cache["last_updated"],
+        }
 
     @app.get("/")
     def index() -> str:
@@ -233,18 +294,77 @@ def create_app(
 
     @app.get("/api/groups")
     def api_groups() -> Any:
+        state = get_schedule_state(force_refresh=request.args.get("refresh") == "1")
         return jsonify(
             {
+                "last_updated": state["last_updated"],
                 "groups": [
                     {
                         "group": group,
                         "teams": [team_payload(team) for team in group_teams],
-                        "matches": match_options[group],
+                        "matches": state["match_options"][group],
                     }
                     for group, group_teams in groups.items()
                 ]
             }
         )
+
+    @app.get("/api/current-probabilities")
+    def api_current_probabilities() -> Any:
+        force_refresh = request.args.get("refresh") == "1"
+        state = get_schedule_state(force_refresh=force_refresh)
+        current_signature = schedule_signature(state["schedules"])
+        if (
+            not force_refresh
+            and schedule_cache["current_payload"] is not None
+            and schedule_cache["current_signature"] == current_signature
+        ):
+            return jsonify(schedule_cache["current_payload"])
+
+        fixed_results = state["fixed_results"]
+        standings_by_group = current_group_standings(groups, fixed_results, random.Random(DEFAULT_SEED))
+        probabilities = run_simulations(
+            CURRENT_PROBABILITY_SIMULATIONS,
+            teams,
+            groups,
+            seed=DEFAULT_SEED,
+            fixed_results=fixed_results,
+            show_progress=False,
+        ).set_index("team")
+
+        payload = {
+            "simulations": CURRENT_PROBABILITY_SIMULATIONS,
+            "locked_matches": len(fixed_results),
+            "last_updated": state["last_updated"],
+            "cache_ttl_seconds": SCHEDULE_CACHE_TTL_SECONDS,
+            "groups": [
+                {
+                    "group": group,
+                    "standings": [
+                        {
+                            "team": team_payload(standing.team),
+                            "played": standing.played,
+                            "wins": standing.wins,
+                            "draws": standing.draws,
+                            "losses": standing.losses,
+                            "goals_for": standing.goals_for,
+                            "goals_against": standing.goals_against,
+                            "goal_difference": standing.goal_difference,
+                            "points": standing.points,
+                            "round_of_32_prob": float(probabilities.loc[standing.team.name, "round_of_32_prob"]),
+                            "group_eliminated_prob": float(
+                                probabilities.loc[standing.team.name, "group_eliminated_prob"]
+                            ),
+                        }
+                        for standing in standings_by_group[group]
+                    ],
+                }
+                for group in sorted(groups)
+            ],
+        }
+        schedule_cache["current_payload"] = payload
+        schedule_cache["current_signature"] = current_signature
+        return jsonify(payload)
 
     @app.route("/api/simulate-match", methods=["GET", "POST"])
     def api_simulate_match() -> Any:
@@ -254,9 +374,10 @@ def create_app(
         if request.method == "GET":
             team_a_name = request.args.get("team_a")
             team_b_name = request.args.get("team_b")
+        state = get_schedule_state()
         if team_a_name not in teams or team_b_name not in teams:
             return jsonify({"error": "Unknown team"}), 400
-        if frozenset((team_a_name, team_b_name)) not in valid_group_matches:
+        if frozenset((team_a_name, team_b_name)) not in state["valid_group_matches"]:
             return jsonify({"error": "Match must be one of the configured group-stage matches"}), 400
 
         team_a = teams[team_a_name]
@@ -269,7 +390,7 @@ def create_app(
             allow_draw=True,
         )
         top_scores = scores.head(10).to_dict(orient="records")
-        schedule = schedules_by_match.get(frozenset((team_a_name, team_b_name)))
+        schedule = state["schedules_by_match"].get(frozenset((team_a_name, team_b_name)))
         actual_probability = None
         if schedule and schedule.is_played:
             match_score = scores[

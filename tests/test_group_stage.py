@@ -1,7 +1,9 @@
 import random
 
-from src.group_stage import rank_standings
-from src.models import Team, TeamStanding
+import numpy as np
+
+from src.group_stage import fixed_score_for_match, rank_standings, simulate_group
+from src.models import FixedMatchResult, Team, TeamStanding
 
 
 def test_group_ranking_uses_points_goal_difference_goals_scored() -> None:
@@ -19,3 +21,26 @@ def test_group_ranking_uses_points_goal_difference_goals_scored() -> None:
     ranked = rank_standings(standings, random.Random(42))
 
     assert [standing.team.name for standing in ranked] == ["B", "A", "C"]
+
+
+def test_group_simulation_uses_fixed_result_in_requested_order() -> None:
+    teams = [
+        Team("A", 1800, 1.0, 1.0, "UEFA", False),
+        Team("B", 1800, 1.0, 1.0, "UEFA", False),
+        Team("C", 1800, 1.0, 1.0, "UEFA", False),
+        Team("D", 1800, 1.0, 1.0, "UEFA", False),
+    ]
+    fixed_results = {
+        frozenset(("A", "B")): FixedMatchResult("B", "A", 2, 0),
+    }
+
+    fixed_score = fixed_score_for_match(teams[0], teams[1], fixed_results)
+    ranked, _top_two, _third = simulate_group(
+        teams,
+        np.random.default_rng(1),
+        random.Random(1),
+        fixed_results,
+    )
+
+    assert fixed_score == (0, 2)
+    assert next(standing for standing in ranked if standing.team.name == "B").points >= 3

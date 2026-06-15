@@ -23,6 +23,14 @@ class MatchResult:
     went_to_penalties: bool = False
 
 
+@dataclass(frozen=True)
+class FixedMatchResult:
+    team_a: str
+    team_b: str
+    goals_a: int
+    goals_b: int
+
+
 @dataclass
 class TeamStanding:
     team: Team

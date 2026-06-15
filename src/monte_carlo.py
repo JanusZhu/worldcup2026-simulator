@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import random
 from collections import defaultdict
+from collections.abc import Iterable
 
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from .models import Team
+from .models import FixedMatchResult, Team
 from .tournament import simulate_tournament
 
 
@@ -26,6 +27,8 @@ def run_simulations(
     teams: dict[str, Team],
     groups: dict[str, list[Team]],
     seed: int = 42,
+    fixed_results: dict[frozenset[str], FixedMatchResult] | None = None,
+    show_progress: bool = True,
 ) -> pd.DataFrame:
     if n <= 0:
         raise ValueError("Number of simulations must be positive")
@@ -36,8 +39,9 @@ def run_simulations(
         team_name: defaultdict(int) for team_name in sorted(teams)
     }
 
-    for _ in tqdm(range(n), desc="Simulating tournaments"):
-        result = simulate_tournament(teams, groups, rng, tie_rng)
+    simulation_range: Iterable[int] = tqdm(range(n), desc="Simulating tournaments") if show_progress else range(n)
+    for _ in simulation_range:
+        result = simulate_tournament(teams, groups, rng, tie_rng, fixed_results)
         for stage in STAGE_COLUMNS:
             value = result[stage]
             if isinstance(value, list):

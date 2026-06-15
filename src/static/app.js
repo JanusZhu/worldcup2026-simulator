@@ -1,12 +1,26 @@
 const groupSelect = document.querySelector("#groupSelect");
 const matchSelect = document.querySelector("#matchSelect");
 const simulateButton = document.querySelector("#simulateButton");
+const refreshCurrentButton = document.querySelector("#refreshCurrentButton");
 const result = document.querySelector("#result");
+const currentMeta = document.querySelector("#currentMeta");
+const currentPredictions = document.querySelector("#currentPredictions");
 
 let groups = [];
 
 const percent = (value) => `${(value * 100).toFixed(1)}%`;
 const fixed = (value) => Number(value).toFixed(2);
+
+function formatUpdatedAt(value) {
+  if (!value) return "未知";
+  return new Date(value).toLocaleString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 function flagImage(team) {
   if (!team.flag_url) return `<div class="flag placeholder"></div>`;
@@ -151,7 +165,45 @@ function renderError(message) {
   result.innerHTML = `<div class="empty-state error">${message}</div>`;
 }
 
-function updateMatchOptions() {
+function renderCurrentPredictionError(message) {
+  currentMeta.textContent = message;
+  currentPredictions.innerHTML = "";
+}
+
+function renderCurrentPredictions(data) {
+  currentMeta.textContent = `已锁定 ${data.locked_matches} 场已结束小组赛，基于 ${data.simulations.toLocaleString()} 次模拟估计剩余赛程。数据更新时间：${formatUpdatedAt(data.last_updated)}。`;
+  currentPredictions.innerHTML = data.groups.map((group) => `
+    <article class="group-card">
+      <h3>Group ${group.group}</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>球队</th>
+            <th>场</th>
+            <th>分</th>
+            <th>净胜</th>
+            <th>晋级</th>
+            <th>淘汰</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${group.standings.map((standing) => `
+            <tr>
+              <td class="team-cell">${flagImage(standing.team)}<span>${standing.team.name}</span></td>
+              <td>${standing.played}</td>
+              <td>${standing.points}</td>
+              <td>${standing.goal_difference}</td>
+              <td>${percent(standing.round_of_32_prob)}</td>
+              <td>${percent(standing.group_eliminated_prob)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </article>
+  `).join("");
+}
+
+function updateMatchOptions(preferredMatchValue = "") {
   const group = groups.find((item) => item.group === groupSelect.value);
   matchSelect.innerHTML = "";
   group.matches.forEach((match) => {
@@ -160,6 +212,9 @@ function updateMatchOptions() {
     option.textContent = match.label;
     matchSelect.appendChild(option);
   });
+  if (preferredMatchValue && [...matchSelect.options].some((option) => option.value === preferredMatchValue)) {
+    matchSelect.value = preferredMatchValue;
+  }
 }
 
 function groupOptionLabel(group) {
@@ -167,10 +222,13 @@ function groupOptionLabel(group) {
   return `Group ${group.group} · ${teamNames}`;
 }
 
-async function loadGroups() {
-  const response = await fetch("/api/groups");
+async function loadGroups(forceRefresh = false) {
+  const selectedGroup = groupSelect.value;
+  const selectedMatch = matchSelect.value;
+  const response = await fetch(forceRefresh ? "/api/groups?refresh=1" : "/api/groups");
   const data = await response.json();
   groups = data.groups;
+  groupSelect.innerHTML = "";
   groups.forEach((group) => {
     const option = document.createElement("option");
     option.value = group.group;
@@ -178,7 +236,10 @@ async function loadGroups() {
     option.title = groupOptionLabel(group);
     groupSelect.appendChild(option);
   });
-  updateMatchOptions();
+  if (selectedGroup && groups.some((group) => group.group === selectedGroup)) {
+    groupSelect.value = selectedGroup;
+  }
+  updateMatchOptions(selectedMatch);
 }
 
 async function simulateSelectedMatch() {
@@ -198,7 +259,46 @@ async function simulateSelectedMatch() {
   renderResult(data);
 }
 
-groupSelect.addEventListener("change", updateMatchOptions);
-simulateButton.addEventListener("click", simulateSelectedMatch);
+async function loadCurrentProbabilities(forceRefresh = false) {
+  if (refreshCurrentButton) {
+    refreshCurrentButton.disabled = true;
+    refreshCurrentButton.textContent = forceRefresh ? "刷新中..." : "读取中...";
+  }
+  const response = await fetch(forceRefresh ? "/api/current-probabilities?refresh=1" : "/api/current-probabilities");
+  const data = await response.json();
+  if (!response.ok) {
+    renderCurrentPredictionError(data.error || "当前出线概率加载失败。");
+  } else {
+    renderCurrentPredictions(data);
+  }
+  if (refreshCurrentButton) {
+    refreshCurrentButton.disabled = false;
+    refreshCurrentButton.textContent = "刷新赛果";
+  }
+}
 
-loadGroups().catch(() => renderError("小组数据加载失败。"));
+async function refreshCurrentData() {
+  try {
+    await loadCurrentProbabilities(true);
+    await loadGroups();
+  } catch {
+    renderCurrentPredictionError("刷新失败，请稍后再试。");
+    if (refreshCurrentButton) {
+      refreshCurrentButton.disabled = false;
+      refreshCurrentButton.textContent = "刷新赛果";
+    }
+  }
+}
+
+groupSelect.addEventListener("change", () => updateMatchOptions());
+simulateButton.addEventListener("click", simulateSelectedMatch);
+if (refreshCurrentButton) {
+  refreshCurrentButton.addEventListener("click", refreshCurrentData);
+}
+
+loadGroups()
+  .then(loadCurrentProbabilities)
+  .catch(() => {
+    renderError("小组数据加载失败。");
+    renderCurrentPredictionError("当前出线概率加载失败。");
+  });

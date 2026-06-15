@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .models import FixedMatchResult
+
 
 OPENFOOTBALL_2026_URL = "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json"
 SOURCE_TEAM_ALIASES = {
@@ -82,3 +84,16 @@ def parse_openfootball_schedule(payload: dict[str, Any]) -> list[MatchSchedule]:
             )
         )
     return schedules
+
+
+def fixed_results_from_schedules(schedules: list[MatchSchedule]) -> dict[frozenset[str], FixedMatchResult]:
+    return {
+        frozenset((schedule.team_a, schedule.team_b)): FixedMatchResult(
+            team_a=schedule.team_a,
+            team_b=schedule.team_b,
+            goals_a=schedule.actual_goals_a,
+            goals_b=schedule.actual_goals_b,
+        )
+        for schedule in schedules
+        if schedule.is_played
+    }

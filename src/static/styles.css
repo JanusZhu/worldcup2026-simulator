@@ -116,9 +116,107 @@ button:hover {
   background: #125745;
 }
 
+button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.secondary-button {
+  width: auto;
+  min-width: 112px;
+  border-color: var(--line);
+  background: var(--panel);
+  color: var(--green);
+}
+
+.secondary-button:hover {
+  border-color: var(--green);
+  background: #eef4ef;
+}
+
 .result {
   display: grid;
   gap: 18px;
+}
+
+.current-section {
+  display: grid;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+  border-top: 1px solid var(--line);
+  padding-top: 22px;
+}
+
+.section-heading h2 {
+  font-size: 24px;
+}
+
+.section-heading p {
+  margin-top: 6px;
+  color: var(--muted);
+  max-width: 620px;
+}
+
+.group-probability-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.group-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  padding: 14px;
+  overflow: auto;
+}
+
+.group-card h3 {
+  margin: 0 0 10px;
+}
+
+.group-card table {
+  table-layout: auto;
+}
+
+.group-card th,
+.group-card td {
+  white-space: nowrap;
+}
+
+.group-card th:first-child,
+.group-card td:first-child {
+  width: auto;
+}
+
+.group-card th:not(:first-child),
+.group-card td:not(:first-child) {
+  min-width: 46px;
+  text-align: right;
+}
+
+.team-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 190px;
+}
+
+.team-cell .flag {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 19px;
+}
+
+.team-cell span {
+  min-width: 0;
+  white-space: normal;
 }
 
 .empty-state {
@@ -334,8 +432,17 @@ td {
   .controls,
   .match-layout,
   .match-meta,
-  .dashboard-grid {
+  .dashboard-grid,
+  .group-probability-grid {
     grid-template-columns: 1fr;
+  }
+
+  .section-heading {
+    display: grid;
+  }
+
+  .secondary-button {
+    width: 100%;
   }
 
   .topbar {
